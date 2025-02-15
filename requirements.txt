@@ -1,5 +1,6 @@
 celery
 python-dotenv
 pymongo
+requests
 curl_cffi
 selectolax

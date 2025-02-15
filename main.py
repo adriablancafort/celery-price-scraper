@@ -4,6 +4,7 @@ from celery import Celery
 from celery.schedules import crontab
 from database import get_database, iterate_collection
 from proxies import get_proxies, ProxyRotator
+from prestashop import get_access_token, update_product_price
 from retailers.amazon import get_amazon_price
 from retailers.tradeinn import get_tradeinn_prices
 from retailers.pccomponentes import get_pccomponentes_prices
@@ -48,9 +49,27 @@ def process_product(product):
     else: print(f"Unknown retailer: {url}")
 
 
+@app.task
+def update_products():
+    """Update product prices in PrestaShop using the Admin API."""
+
+    base_url = getenv('PRESTASHOP_BASE_URL')
+    client_id = getenv('PRESTASHOP_CLIENT_ID')
+    client_secret = getenv('PRESTASHOP_CLIENT_SECRET')
+
+    access_token = get_access_token(base_url, client_id, client_secret)
+
+    for product_id, price in [(1, 45), (2, 90), (3, 200)]:
+        update_product_price(base_url, access_token, product_id, price)
+
+
 app.conf.beat_schedule = {
     'check-prices-daily': {
         'task': 'main.enqueue_products',
         'schedule': crontab(minute=0, hour=0),
     },
+    'update-prices-daily': {
+        'task': 'main.update_products',
+        'schedule': crontab(minute=0, hour=1),
+    }
 }
