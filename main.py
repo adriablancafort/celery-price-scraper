@@ -70,6 +70,6 @@ app.conf.beat_schedule = {
     },
     'update-prices-daily': {
         'task': 'main.update_prices',
-        'schedule': crontab(minute=31, hour=23),
+        'schedule': crontab(minute=35, hour=23),
     }
 }
