@@ -26,8 +26,8 @@ proxy_rotator = ProxyRotator(proxies)
 
 
 @app.task
-def enqueue_urls():
-    """Fetch URLs from MongoDB and enqueue them for processing."""
+def enqueue_products():
+    """Fetch products from MongoDB and enqueue them for processing."""
     
     for product in iterate_collection(db, "monitored"):
         task_product = {
@@ -49,8 +49,8 @@ def process_product(product):
 
 
 app.conf.beat_schedule = {
-    'check-prices-every-minute': {
-        'task': 'main.enqueue_urls',
-        'schedule': crontab(minute='*/1'),
+    'check-prices-daily': {
+        'task': 'main.enqueue_products',
+        'schedule': crontab(minute=0, hour=0),
     },
 }
