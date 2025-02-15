@@ -10,6 +10,7 @@ TRADEINN_ID = "67900fe721cc010007e27784"
 def get_tradeinn_prices(db: Database, proxy_rotator: ProxyRotator, product: dict) -> None:
     """Gets the prices of the given product in all available languages and stores it in the database."""
 
+    product["variant_id"] = ObjectId(product["variant_id"])
     product["retailer_id"] = ObjectId(TRADEINN_ID)
     
     url = product["url"]

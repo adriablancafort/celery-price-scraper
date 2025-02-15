@@ -22,8 +22,9 @@ def get_amazon_price(db: Database, proxy_rotator: ProxyRotator, product: dict) -
     else:
         print(region_id)
  
-    product["region_id"] = ObjectId(region_id)
+    product["variant_id"] = ObjectId(product["variant_id"])
     product["retailer_id"] = ObjectId(AMAZON_ID)
+    product["region_id"] = ObjectId(region_id)
 
     store_price(db, product, price)
     print(f"url: {url}, region_id: {region_id}, price: {price}")

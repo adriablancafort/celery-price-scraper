@@ -10,6 +10,7 @@ PCCOMPONENTES_ID = "679a221c21cc010007e27941"
 def get_pccomponentes_prices(db: Database, proxy_rotator: ProxyRotator, product: dict) -> None:
     """Gets the prices of the given product in all available languages and stores it in the database."""
 
+    product["variant_id"] = ObjectId(product["variant_id"])
     product["retailer_id"] = ObjectId(PCCOMPONENTES_ID)
 
     region_id = "67942b3721cc010007e278df" # España
