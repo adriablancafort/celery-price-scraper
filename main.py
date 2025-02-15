@@ -30,10 +30,11 @@ def enqueue_urls():
     """Fetch URLs from MongoDB and enqueue them for processing."""
     
     for product in iterate_collection(db, "monitored"):
-        product_dict = dict(product)
-        product_dict['_id'] = str(product_dict['_id'])
-        product_dict['variant_id'] = str(product_dict['variant_id'])
-        process_product.delay(product_dict)
+        task_product = {
+            "url": product["url"],
+            "variant_id": str(product["variant_id"]), # Convert to string to avoid JSON serialization issues
+        }
+        process_product.delay(task_product)
 
 
 @app.task
