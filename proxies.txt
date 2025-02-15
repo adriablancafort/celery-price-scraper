@@ -1,0 +1,10 @@
+198.23.239.134:6540:szsbppwy:fh3mognbl0r2
+207.244.217.165:6712:szsbppwy:fh3mognbl0r2
+107.172.163.27:6543:szsbppwy:fh3mognbl0r2
+64.137.42.112:5157:szsbppwy:fh3mognbl0r2
+173.211.0.148:6641:szsbppwy:fh3mognbl0r2
+161.123.152.115:6360:szsbppwy:fh3mognbl0r2
+167.160.180.203:6754:szsbppwy:fh3mognbl0r2
+154.36.110.199:6853:szsbppwy:fh3mognbl0r2
+173.0.9.70:5653:szsbppwy:fh3mognbl0r2
+173.0.9.209:5792:szsbppwy:fh3mognbl0r2
