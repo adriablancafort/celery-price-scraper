@@ -48,8 +48,8 @@ def process_product(product):
 
 
 app.conf.beat_schedule = {
-    'check-prices-hourly': {
+    'check-prices-every-minute': {
         'task': 'main.enqueue_urls',
-        'schedule': crontab(minute=0),
+        'schedule': crontab(minute='*/1'),
     },
 }
