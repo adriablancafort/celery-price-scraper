@@ -35,11 +35,11 @@ def enqueue_products():
             "url": product["url"],
             "variant_id": str(product["variant_id"]), # Convert to string to avoid JSON serialization issues
         }
-        process_product.delay(task_product)
+        check_price.delay(task_product)
 
 
 @app.task
-def process_product(product):
+def check_price(product):
     """Check product price in retailer website and store it in the database."""
 
     url = str(product["url"])
@@ -50,8 +50,8 @@ def process_product(product):
 
 
 @app.task
-def update_products():
-    """Update product prices in PrestaShop using the Admin API."""
+def update_prices():
+    """Update product prices using PrestaShop Admin API."""
 
     base_url = getenv('PRESTASHOP_BASE_URL')
     client_id = getenv('PRESTASHOP_CLIENT_ID')
@@ -66,10 +66,10 @@ def update_products():
 app.conf.beat_schedule = {
     'check-prices-daily': {
         'task': 'main.enqueue_products',
-        'schedule': crontab(minute=0, hour=0),
+        'schedule': crontab(minute=30, hour=23),
     },
     'update-prices-daily': {
-        'task': 'main.update_products',
-        'schedule': crontab(minute=0, hour=1),
+        'task': 'main.update_prices',
+        'schedule': crontab(minute=31, hour=23),
     }
 }
