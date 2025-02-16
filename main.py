@@ -1,8 +1,8 @@
 from dotenv import load_dotenv
 from os import getenv
-from celery import Celery
+from celery import Celery, chord
 from celery.schedules import crontab
-from database import get_database, iterate_collection
+from database import get_database, yield_products, yield_prices
 from proxies import get_proxies, ProxyRotator
 from prestashop import get_access_token, update_product_price
 from retailers.amazon import get_amazon_price
@@ -21,7 +21,15 @@ broker_url = f"amqp://{rabbit_user}:{rabbit_password}@{rabbit_ip}:{rabbit_port}/
 
 app = Celery("tasks", broker=broker_url)
 
-db = get_database()
+mongo_ip = getenv("MONGO_IP")
+mongo_port = int(getenv("MONGO_PORT"))
+mongo_user = getenv("MONGO_USER")
+mongo_password = getenv("MONGO_PASSWORD")
+mongo_db_name = getenv("MONGO_DB_NAME")
+
+mongo_url = f"mongodb://{mongo_user}:{mongo_password}@{mongo_ip}:{mongo_port}"
+
+db = get_database(mongo_url, mongo_db_name)
 proxies = get_proxies()
 proxy_rotator = ProxyRotator(proxies)
 
@@ -30,12 +38,13 @@ proxy_rotator = ProxyRotator(proxies)
 def enqueue_products():
     """Fetch products from MongoDB and enqueue them for processing."""
     
-    for product in iterate_collection(db, "monitored"):
-        task_product = {
-            "url": product["url"],
-            "variant_id": str(product["variant_id"]), # Convert to string to avoid JSON serialization issues
-        }
-        check_price.delay(task_product)
+    check_tasks = [
+        check_price.s(product)
+        for product in yield_products(db)
+    ]
+    
+    # When all prices have been checked, execute price updating tasks
+    chord(check_tasks)(enqueue_prices.s())
 
 
 @app.task
@@ -50,26 +59,33 @@ def check_price(product):
 
 
 @app.task
-def update_prices():
-    """Update product prices using PrestaShop Admin API."""
+def enqueue_prices():
+    """Fetch prices from MongoDB and enqueue them for processing."""
 
     base_url = getenv('PRESTASHOP_BASE_URL')
     client_id = getenv('PRESTASHOP_CLIENT_ID')
     client_secret = getenv('PRESTASHOP_CLIENT_SECRET')
 
     access_token = get_access_token(base_url, client_id, client_secret)
+    
+    process_tasks = [
+        process_price.s(base_url, access_token, prices)
+        for prices in yield_prices(db)
+    ]
 
-    for product_id, price in [(1, 45), (2, 90), (3, 200)]:
-        update_product_price(base_url, access_token, product_id, price)
+    chord(process_tasks)(None)
+
+
+@app.task
+def process_price(prices, base_url, access_token):
+    """Compute optimal price, store it in the database and update it on the website."""
+
+    process_price(db, base_url, access_token, prices)
 
 
 app.conf.beat_schedule = {
-    'check-prices-daily': {
+    'run-daily': {
         'task': 'main.enqueue_products',
-        'schedule': crontab(minute=30, hour=23),
-    },
-    'update-prices-daily': {
-        'task': 'main.update_prices',
-        'schedule': crontab(minute=35, hour=23),
+        'schedule': crontab(minute=0, hour=19),
     }
 }

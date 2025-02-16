@@ -1,22 +1,13 @@
 from pymongo import MongoClient
 from pymongo.database import Database
 from datetime import datetime, UTC
-import os
 
 
-def get_database() -> Database:
+def get_database(mongo_url, mongo_db_name) -> Database:
     """Get MongoDB database instance."""
-
-    mongo_ip = os.getenv("MONGO_IP")
-    mongo_port = int(os.getenv("MONGO_PORT"))
-    mongo_user = os.getenv("MONGO_USER")
-    mongo_password = os.getenv("MONGO_PASSWORD")
-    mongo_db_name = os.getenv("MONGO_DB_NAME")
-
-    connection_string = f"mongodb://{mongo_user}:{mongo_password}@{mongo_ip}:{mongo_port}"
     
     try:
-        client = MongoClient(connection_string)
+        client = MongoClient(mongo_url)
         db = client[mongo_db_name]
         print("Database connection successful")
         return db
@@ -25,15 +16,59 @@ def get_database() -> Database:
         raise
 
 
-def iterate_collection(db: Database, collection_name: str):
-    "Yields documents from a MongoDB collection."
-
-    collection = db[collection_name]
-    cursor = collection.find()
+def yield_products(db: Database):
+    """Yields products from MongoDB with serializable IDs."""
+    
+    monitored_collection = db["monitored"]
+    
+    pipeline = [
+        {"$project": {
+            "_id": 0,
+            "url": 1,
+            "variant_id": {"$toString": "$variant_id"}
+        }}
+    ]
     
     try:
-        for document in cursor:
-            yield document
+        cursor = monitored_collection.aggregate(pipeline)
+        for product in cursor:
+            yield product
+    finally:
+        cursor.close()
+
+
+def yield_prices(db: Database):
+    """Yields price all retailers history for each variant-region combination"""
+
+    prices_collection = db["prices"]
+    
+    pipeline = [
+        {"$sort": {"timestamp": -1}},
+
+        {"$group": {
+            "_id": {
+                "variant_id": "$metadata.variant_id",
+                "region_id": "$metadata.region_id"
+            },
+            "prices": {"$push": {
+                "retailer_id": {"$toString": "$metadata.retailer_id"},
+                "price": "$price",
+                "timestamp": {"$toString": "$timestamp"}
+            }}
+        }},
+        
+        {"$project": {
+            "_id": 0,
+            "variant_id": {"$toString": "$_id.variant_id"},
+            "region_id": {"$toString": "$_id.region_id"},
+            "prices": 1
+        }}
+    ]
+    
+    try:
+        cursor = prices_collection.aggregate(pipeline)
+        for price in cursor:
+            yield price
     finally:
         cursor.close()
 
