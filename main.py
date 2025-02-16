@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 from os import getenv
-from celery import Celery, chord
+from celery import Celery, group
 from celery.schedules import crontab
 from database import get_database, yield_products, yield_prices
 from proxies import get_proxies, ProxyRotator
@@ -38,13 +38,13 @@ proxy_rotator = ProxyRotator(proxies)
 def enqueue_products():
     """Fetch products from MongoDB and enqueue them for processing."""
     
-    check_tasks = [
+    check_tasks = group([
         check_price.s(product)
         for product in yield_products(db)
-    ]
+    ])
     
-    # When all prices have been checked, execute price updating tasks
-    chord(check_tasks)(enqueue_prices.s())
+    # Chain the checks with enqueue_prices
+    (check_tasks | enqueue_prices.si()).apply_async()
 
 
 @app.task
@@ -68,12 +68,12 @@ def enqueue_prices():
 
     access_token = get_access_token(base_url, client_id, client_secret)
     
-    process_tasks = [
+    process_tasks = group([
         process_price.s(base_url, access_token, prices)
         for prices in yield_prices(db)
-    ]
+    ])
 
-    chord(process_tasks)(None)
+    process_tasks.apply_async()
 
 
 @app.task
