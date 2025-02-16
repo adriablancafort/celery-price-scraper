@@ -4,7 +4,7 @@ from celery import Celery, chord
 from celery.schedules import crontab
 from database import get_database, yield_products, yield_prices
 from proxies import get_proxies, ProxyRotator
-from prestashop import get_access_token, update_product_price
+from prestashop import get_access_token
 from retailers.amazon import get_amazon_price
 from retailers.tradeinn import get_tradeinn_prices
 from retailers.pccomponentes import get_pccomponentes_prices
@@ -86,6 +86,6 @@ def process_price(prices, base_url, access_token):
 app.conf.beat_schedule = {
     'run-daily': {
         'task': 'main.enqueue_products',
-        'schedule': crontab(minute=0, hour=19),
+        'schedule': crontab(minute=40, hour=19),
     }
 }
