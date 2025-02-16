@@ -86,6 +86,6 @@ def process_price(prices, base_url, access_token):
 app.conf.beat_schedule = {
     'run-daily': {
         'task': 'main.enqueue_products',
-        'schedule': crontab(minute=40, hour=19),
+        'schedule': crontab(minute=8, hour=20),
     }
 }
